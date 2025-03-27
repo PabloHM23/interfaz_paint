@@ -1,23 +1,45 @@
 package Paint;
 
 import java.awt.EventQueue;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Point;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+
+import java.awt.BasicStroke;
+import java.awt.BorderLayout;
 import java.awt.Canvas;
 import java.awt.Color;
 import javax.swing.JButton;
 import javax.swing.JRadioButton;
 import javax.swing.ButtonGroup;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
+import java.util.ArrayList;
+import java.util.List;
 import java.awt.event.ActionEvent;
 import javax.swing.JLabel;
+import javax.swing.SwingConstants;
 
-public class Paint {
+public class Paint implements MouseListener, MouseMotionListener {
 
 	private JFrame frame;
 	private final ButtonGroup buttonGroup = new ButtonGroup();
-
+	private DrawingPanel drawingPanel; 
+	
+	private Point lastPoint; // Para almacenar la última posición del mouse
+     // Para almacenar los puntos dibujados
+	private List<Point> points = new ArrayList<>();
+	
+    List<List<Point>> listaDePuntos = new ArrayList<>();
+    
+    private boolean isErasing = false;
+    private int brushSize = 3;
+    private JLabel brushSizeLabel;
 	/**
 	 * Launch the application.
 	 */
@@ -161,29 +183,169 @@ public class Paint {
 		panel.add(lblNewLabel_2);
 		
 		JButton brush = new JButton("Brush");
+		brush.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				isErasing = false;
+			}
+		});
 		brush.setBounds(59, 174, 89, 23);
 		panel.add(brush);
 		
 		JButton borrador = new JButton("Borrador");
-		borrador.setBounds(59, 218, 89, 23);
+		borrador.setBounds(59, 253, 89, 23);
 		panel.add(borrador);
 		
 		JButton rellenar = new JButton("Rellenar");
-		rellenar.setBounds(59, 262, 89, 23);
-		panel.add(rellenar);
-		limpiar.addActionListener(new ActionListener() {
+		rellenar.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 			}
 		});
+		rellenar.setBounds(59, 297, 66, 23);
+		panel.add(rellenar);
+		limpiar.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				listaDePuntos.clear();
+                drawingPanel.repaint();
+			}
+		});
+		
+		rellenar.setBounds(108, 300, 40, 23);
+        panel.add(rellenar);
+        
+        brushSizeLabel = new JLabel("Tamaño: " + brushSize);
+        brushSizeLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        brushSizeLabel.setBounds(59, 208, 89, 14);
+        panel.add(brushSizeLabel);
+        
+        JButton menosBrush = new JButton("-");
+        menosBrush.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        		if (brushSize > 1) { // Límite mínimo de tamaño
+                    brushSize--;
+                    tamañoBrush();
+        		}
+        	}
+        });
+        menosBrush.setBounds(6, 174, 36, 23);
+        panel.add(menosBrush);
+        
+        JButton masBrush = new JButton("+1");
+        masBrush.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        		if (brushSize < 20) { // Límite máximo de tamaño
+                    brushSize++;
+                    tamañoBrush();
+        		}
+        	}
+        });
+        masBrush.setBounds(177, 174, 36, 23);
+        panel.add(masBrush);
 		
 		JPanel panel_1 = new JPanel();
 		panel_1.setBackground(new Color(255, 255, 255));
 		panel_1.setBounds(290, 34, 578, 525);
 		frame.getContentPane().add(panel_1);
-		panel_1.setLayout(null);
 		
-		Canvas canvas = new Canvas();
-		canvas.setBounds(0, 0, 578, 525);
-		panel_1.add(canvas);
+		drawingPanel = new DrawingPanel();
+		panel_1.add(drawingPanel, BorderLayout.CENTER);
+
+        drawingPanel.addMouseListener(this);
+        drawingPanel.addMouseMotionListener(this);
+		
+		
+	}
+	
+	public void tamañoBrush() {
+		brushSizeLabel.setText("Tamaño: " + brushSize);
+	}
+
+	@Override
+	public void mouseDragged(MouseEvent e) {
+		Point newPoint = e.getPoint(); 
+		 
+		 points.add(newPoint);  
+	        
+	     drawingPanel.repaint();
+	        
+	     lastPoint = newPoint;
+		
+	}
+	
+	class DrawingPanel extends JPanel {
+	    public DrawingPanel() {
+	        setBackground(Color.WHITE);
+	    }
+
+	    @Override
+	    protected void paintComponent(Graphics g) {
+	        super.paintComponent(g);
+	        Graphics2D g2d = (Graphics2D) g;
+	        
+	        // Configuración del dibujo
+	        g2d.setColor(Color.BLACK);
+	        g2d.setStroke(new BasicStroke(3));
+	        
+	        // Dibujar todos los trazos guardados (listaDePuntos)
+	        for (List<Point> trazo : listaDePuntos) {
+	            if (trazo.size() > 1) {
+	                for (int i = 1; i < trazo.size(); i++) {
+	                    Point p1 = trazo.get(i - 1);
+	                    Point p2 = trazo.get(i);
+	                    g2d.drawLine(p1.x, p1.y, p2.x, p2.y);
+	                }
+	            }
+	        }
+	        
+	        // Dibujar el trazo actual (points) mientras se arrastra el mouse
+	        if (points.size() > 1) {
+	            for (int i = 1; i < points.size(); i++) {
+	                Point p1 = points.get(i - 1);
+	                Point p2 = points.get(i);
+	                g2d.drawLine(p1.x, p1.y, p2.x, p2.y);
+	            }
+	        }
+	    }
+	}
+
+	@Override
+	public void mouseMoved(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mouseClicked(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mousePressed(MouseEvent e) {
+		lastPoint = e.getPoint();
+        points.add(lastPoint);
+		
+	}
+
+	@Override
+	public void mouseReleased(MouseEvent e) {
+		ArrayList<Point> listaCopiada = (ArrayList<Point>) (((ArrayList<Point>) points).clone());
+		
+		listaDePuntos.add(listaCopiada); 
+		points.clear();
+		
+		System.out.println(listaDePuntos);
+		
+	}
+
+	@Override
+	public void mouseEntered(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mouseExited(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
 	}
 }
